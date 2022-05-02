@@ -1,0 +1,126 @@
+@media only screen and (min-width: 768px) {
+	body {
+		background-color: #000000;
+		margin: 0px;
+		word-wrap: break-word;
+		overflow-wrap: break-word;
+	}
+        
+        em {
+		text-shadow: 1px 1px 5px rgba(255, 0, 128, 1.0);
+        }
+	
+	h1.title {
+		font-size: 48pt;
+		font-weight: bold;	font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+		text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+	
+	}
+	
+	.maintext {
+		font-size: 12pt;
+		font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+		text-shadow: 1px 1px 5px rgba(0, 0, 0, 0.5);
+
+	}
+	
+	#rightbox {
+		background-color: #ffffff;
+		top: 0px;
+		bottom: 0px;
+		left: 480px;
+		right: 0px;
+		position:absolute;
+		
+	}
+	
+	
+	#mesbox {
+		padding: 50px;
+		background-color: #ffffff;
+	}
+	
+	#backscript {
+		top: 0px;
+		left: 10px;
+		position: fixed;
+	}
+	
+	
+	#topbox {
+		left: 480px;
+		position: fixed;
+	}
+	input {
+  box-sizing: border-box;
+  margin: 1em 0;
+  padding: .8em;
+  border-radius: 2em;
+  border: 2px solid #aaa;
+}
+}
+
+@media only screen and (max-width: 767px) {
+	input {
+  box-sizing: border-box;
+  margin: 1em 0;
+  padding: .8em;
+  border-radius: 2em;
+  border: 2px solid #aaa;
+}
+
+	body {
+		background-color: #000000;
+		margin: 0px;
+	}
+	
+	h1.title {
+		font-size: 48pt;
+		font-weight: bold;	font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+		text-shadow: 1px 1px 5px rgba(255, 255, 255, 0.5);
+	
+	}
+	
+	a:link { color: #00FFFF; }
+	a:visited { color: #008080; }
+	a:hover { color: #FFFF00; }
+	a:active { color: #FF8000; }
+	
+	.maintext {
+		font-size: 12pt;
+		font-family: 'Avenir','Helvetica Neue','Helvetica','Arial','Hiragino Sans','ヒラギノ角ゴシック',YuGothic,'Yu Gothic','メイリオ', Meiryo,'ＭＳ Ｐゴシック','MS PGothic';
+		text-shadow: 1px 1px 5px rgba(255, 255, 255, 0.5);
+
+	}
+	
+	#rightbox {
+		background-color: rgba(0,0,0,0);
+		color: #ffffff;
+		top: 0px;
+		bottom: 0px;
+		left: 20px;
+		right: 20px;
+		position:absolute;
+		
+	}
+	
+	
+	#mesbox {
+		padding: 5px;
+		background-color: rgba(0,0,0,0.8);
+	}
+	
+	#backscript {
+		top: 0px;
+		left: -140px;
+		position: fixed;
+	}
+	
+	#topbox {
+		top: 0px;
+		left: 0px;
+		right: 0px;
+		position: fixed;
+		background-color: rgba(28,28,28,0.8);
+	}
+}
