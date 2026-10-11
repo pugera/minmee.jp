@@ -334,6 +334,15 @@
 
     // ナチュラル接待では、接待中に出したミノが毎回1位になって気づかれてしまうので査定を隠す
     $("rankingCard").hidden = st.mode === MODE.NATURAL;
+
+    // 鬼モードのお情けの NEXT
+    const nextBox = $("nextBox");
+    nextBox.hidden = st.next === null || phase !== "playing";
+    if (!nextBox.hidden && nextBox.dataset.kind !== String(st.next)) {
+      drawNext(st.next);
+      nextBox.dataset.kind = st.next;
+    }
+    nextBox.classList.toggle("faded", st.stack >= 16);
     st.ranking.forEach((r, i) => {
       const row = rankRows[r.kind];
       row.style.top = i * ROW_H + "px";
@@ -419,11 +428,43 @@
   const LIGHT = COLORS.map((c) => shade(c, .45));
   const DARK = COLORS.map((c) => shade(c, -.45));
 
+  // paintBlock は立体感のあるブロックを1マス描く（左上 x, y・大きさ s はピクセル）。
+  function paintBlock(c, x, y, s, kind) {
+    const b = Math.max(1, Math.round(s / 14));
+    c.fillStyle = DARK[kind];
+    c.fillRect(x, y, s, s);
+    c.fillStyle = LIGHT[kind];
+    c.fillRect(x + b, y + b, s - 3 * b, s - 3 * b);
+    c.fillStyle = COLORS[kind];
+    c.fillRect(x + 3 * b, y + 3 * b, s - 5 * b, s - 5 * b);
+    c.fillStyle = "rgba(255,255,255,.14)";
+    c.fillRect(x + 3 * b, y + 3 * b, s - 5 * b, Math.round(s * .18));
+  }
+
+  // drawNext は鬼モードの NEXT 窓にミノを描く。
+  function drawNext(kind) {
+    const cv = $("nextCanvas");
+    const dpr = window.devicePixelRatio || 1;
+    const r = cv.getBoundingClientRect();
+    cv.width = Math.max(1, Math.round(r.width * dpr));
+    cv.height = Math.max(1, Math.round(r.height * dpr));
+    const c = cv.getContext("2d");
+    const cells = api.shapes[kind];
+    const xs = cells.map((p) => p[0]), ys = cells.map((p) => p[1]);
+    const minX = Math.min(...xs), minY = Math.min(...ys);
+    const w = Math.max(...xs) - minX + 1, h = Math.max(...ys) - minY + 1;
+    const s = Math.floor(Math.min(cv.width / 4.4, cv.height / 2.2));
+    const ox = Math.round((cv.width - w * s) / 2), oy = Math.round((cv.height - h * s) / 2);
+    for (const [x, y] of cells) paintBlock(c, ox + (x - minX) * s, oy + (y - minY) * s, s, kind);
+  }
+
   function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const r = canvas.getBoundingClientRect();
     canvas.width = Math.round(r.width * dpr);
     canvas.height = Math.round(r.height * dpr);
+    delete $("nextBox").dataset.kind; // NEXT 窓も描き直す
+    dirty = true;
   }
   new ResizeObserver(resizeCanvas).observe(canvas);
 
@@ -449,19 +490,8 @@
     for (let y = 1; y < 20; y++) { ctx.moveTo(px(0), py(y) + .5); ctx.lineTo(px(10), py(y) + .5); }
     ctx.stroke();
 
-    const block = (x, y, kind, alpha = 1) => {
-      if (y < 0) return;
-      const b = Math.max(1, Math.round(cs / 14));
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = DARK[kind];
-      ctx.fillRect(px(x), py(y), cs, cs);
-      ctx.fillStyle = LIGHT[kind];
-      ctx.fillRect(px(x) + b, py(y) + b, cs - 3 * b, cs - 3 * b);
-      ctx.fillStyle = COLORS[kind];
-      ctx.fillRect(px(x) + 3 * b, py(y) + 3 * b, cs - 5 * b, cs - 5 * b);
-      ctx.fillStyle = "rgba(255,255,255,.14)";
-      ctx.fillRect(px(x) + 3 * b, py(y) + 3 * b, cs - 5 * b, Math.round(cs * .18));
-      ctx.globalAlpha = 1;
+    const block = (x, y, kind) => {
+      if (y >= 0) paintBlock(ctx, px(x), py(y), cs, kind);
     };
     const outline = (x, y, color, inset, width) => {
       if (y < 0) return;

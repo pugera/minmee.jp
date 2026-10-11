@@ -12,6 +12,13 @@ function midi(name) {
   return base + (m[2] ? 1 : 0) + (Number(m[3]) + 1) * 12;
 }
 
+// toMajor はイ短調の音をイ長調の音にする（ド・ファ・ソを半音上げる）。
+// 接待中は同じ BGM をこれで明るい長調にして鳴らす。
+function toMajor(n) {
+  const pc = n % 12;
+  return pc === 0 || pc === 5 || pc === 7 ? n + 1 : n;
+}
+
 // メロディ [音, 拍]（null は休符）。A パート8小節・B パート8小節。
 const MELODY_A = [
   ["E5", 1], ["B4", .5], ["C5", .5], ["D5", 1], ["C5", .5], ["B4", .5],
@@ -70,6 +77,7 @@ class SettaiSound {
     this.timer = null;
     this.leadType = "square";
     this.bpm = 140;
+    this.major = false; // 接待中は長調で鳴らす
   }
 
   // ユーザー操作（クリック・キー）の中で呼ぶ。ブラウザは操作なしでは音を鳴らせない。
@@ -274,7 +282,7 @@ class SettaiSound {
         const dur = ev.dur * this.spb;
         const o = ctx.createOscillator();
         o.type = this.leadType;
-        o.frequency.value = midiToFreq(ev.note);
+        o.frequency.value = midiToFreq(this.pitch(ev.note));
         const f = ctx.createBiquadFilter();
         f.type = "lowpass";
         f.frequency.value = this.leadType === "sawtooth" ? 2200 : 3800;
@@ -293,7 +301,7 @@ class SettaiSound {
         const dur = ev.dur * this.spb * .85;
         const o = ctx.createOscillator();
         o.type = "triangle";
-        o.frequency.value = midiToFreq(ev.note);
+        o.frequency.value = midiToFreq(this.pitch(ev.note));
         const g = ctx.createGain();
         g.gain.setValueAtTime(.22, t);
         g.gain.linearRampToValueAtTime(0, t + dur);
@@ -314,14 +322,24 @@ class SettaiSound {
     }
   }
 
-  // ゲームの状況に合わせて BGM を変える（レベルでテンポアップ、ピンチでさらに速く、鬼モードは荒い音色）。
+  // 曲の音を、今の調（短調 / 接待中の長調）の音にする。
+  pitch(note) {
+    return this.major ? toMajor(note) : note;
+  }
+
+  // ゲームの状況に合わせて BGM を変える。
+  //   レベルでテンポアップ、ピンチでさらに速く、鬼モードは荒い音色。
+  //   接待しているとき（接待モード、ナチュラル接待のこっそり接待中）は長調。
+  //   途中で変わっても、次に鳴らす音から切り替わるので曲は途切れない。
   follow(state) {
     if (!state) return;
     let bpm = Math.min(132 + (state.level - 1) * 6, 200);
     if (state.stack >= 14) bpm *= 1.15;
     this.setTempo(bpm);
     this.leadType = state.mode === 2 ? "sawtooth" : "square";
+    this.major = state.mode === 0 || (state.mode === 3 && state.assisting);
   }
 }
 
-window.SettaiSound = SettaiSound;
+if (typeof window !== "undefined") window.SettaiSound = SettaiSound;
+if (typeof module === "object" && module.exports) module.exports = { SettaiSound, buildSong, toMajor, midi }; // テスト用

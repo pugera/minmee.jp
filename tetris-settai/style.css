@@ -136,6 +136,36 @@ button {
 .mode-badge[data-mode="2"] { color: var(--oni); }
 .mode-badge[data-mode="3"] { color: var(--natural); }
 
+/* ---- NEXT（鬼モードのお情け。盤面の右上に重ねる） ---- */
+
+.next-box {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 27%;
+  padding: 3px 4px 5px;
+  border-radius: 8px;
+  background: rgba(20, 20, 34, .82);
+  border: 1px solid var(--line);
+  text-align: center;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.next-box[hidden] { display: none; }
+.next-box.faded { opacity: .3; } /* 積み上がって右上が埋まってきたら薄くする */
+.next-box span {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  color: var(--oni);
+}
+.next-box canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+}
+
 /* ---- 接待AIのひとこと ---- */
 
 .bubble {
