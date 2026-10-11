@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>接待テトリス</title>
+  <meta name="description" content="プレイヤーにとって一番都合の良いミノを、毎回AIが計算して出してくれるテトリス">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 3 3'%3E%3Cpath fill='%23ffd23c' d='M0 1.5h3v1H0zM1 .5h1v1H1z'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <h1>接待テトリス</h1>
+    <p class="tagline">あなたにとって一番都合の良いミノを、毎回AIが計算してお出しします</p>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="board-wrap" id="boardWrap">
+        <canvas id="board" aria-label="ゲーム盤面"></canvas>
+
+        <div class="overlay" id="startOverlay">
+          <div class="start-card">
+            <h2>いらっしゃいませ</h2>
+            <p class="start-lead">モードを選んでください</p>
+            <div class="seg" role="group" aria-label="モード" data-modes></div>
+            <p class="mode-desc" id="modeDesc"></p>
+            <button class="primary" id="startBtn" disabled>はじめる</button>
+            <p class="start-note">Enter / Space でもスタート<br>🔊 BGM と効果音が鳴ります</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="touch" id="touch" aria-label="タッチ操作">
+        <button data-touch="ccw" aria-label="左回転">⟲</button>
+        <button data-touch="left" aria-label="左">◀</button>
+        <button data-touch="down" aria-label="ソフトドロップ">▼</button>
+        <button data-touch="right" aria-label="右">▶</button>
+        <button data-touch="cw" aria-label="右回転">⟳</button>
+        <button data-touch="hard" aria-label="ハードドロップ">⤓</button>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="card stats">
+        <div class="stat"><span class="label">モード</span><span class="value mode-badge" id="mode">-</span></div>
+        <div class="stat"><span class="label">スコア</span><span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">ライン</span><span class="value" id="lines">0</span></div>
+        <div class="stat"><span class="label">レベル</span><span class="value" id="level">1</span></div>
+      </div>
+
+      <div class="card">
+        <h3>接待AIより</h3>
+        <div class="bubble">
+          <span class="avatar" aria-hidden="true">🙇</span>
+          <p id="comment">準備中です…</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>ミノ査定 <small>（2手先まで読んだ都合の良さ）</small></h3>
+        <div class="ranking" id="ranking"></div>
+      </div>
+
+      <div class="card settings">
+        <h3>設定</h3>
+        <div class="seg" role="group" aria-label="モード" data-modes></div>
+        <label class="switch"><input type="checkbox" id="optHint"><span>おすすめ位置を表示</span><kbd>H</kbd></label>
+        <label class="switch"><input type="checkbox" id="optBgm"><span>BGM</span><kbd>M</kbd></label>
+        <label class="switch"><input type="checkbox" id="optSe"><span>効果音</span><kbd>N</kbd></label>
+        <label class="volume"><span>音量</span><input type="range" id="optVol" min="0" max="100"></label>
+        <div class="buttons">
+          <button id="btnPause">一時停止 <kbd>P</kbd></button>
+          <button id="btnNew">新しいゲーム <kbd>R</kbd></button>
+        </div>
+      </div>
+
+      <div class="card help">
+        <h3>操作</h3>
+        <dl>
+          <dt><kbd>←</kbd><kbd>→</kbd></dt><dd>移動</dd>
+          <dt><kbd>↓</kbd></dt><dd>ソフトドロップ</dd>
+          <dt><kbd>Space</kbd></dt><dd>ハードドロップ</dd>
+          <dt><kbd>↑</kbd><kbd>X</kbd></dt><dd>右回転</dd>
+          <dt><kbd>Z</kbd></dt><dd>左回転</dd>
+          <dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>接待 / 通常 / 鬼</dd>
+        </dl>
+      </div>
+    </aside>
+  </main>
+
+  <div class="error" id="error" role="alert" hidden></div>
+
+  <!-- ES Modules は file:// で開くと読み込めないので、通常の script タグで読み込む -->
+  <script src="engine.js"></script>
+  <script src="audio.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
