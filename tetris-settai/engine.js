@@ -356,6 +356,18 @@
   const pickBest = (rs, rng) => pick(rs, rng, 1);
   const pickWorst = (rs, rng) => pick(rs, rng, -1);
 
+  // 鬼モードのお情け。毎回最悪のミノだと攻略不可能なので手加減する。
+  //   choices: 評価の低い方から何種類の中からランダムに選ぶか（1 なら常に最悪）
+  //   next: 次のミノまで先に決めて NEXT に表示するか
+  const ONI_MERCY = { choices: 3, next: true };
+
+  // pickOni は評価の低い方から choices 種類の中からランダムに1つ選ぶ。
+  function pickOni(rs, rng) {
+    if (ONI_MERCY.choices <= 1) return pickWorst(rs, rng);
+    const worst = rs.slice().sort((a, b) => a.score - b.score).slice(0, ONI_MERCY.choices);
+    return worst[rng.int(worst.length)].kind;
+  }
+
   // ---- 乱数（テストで再現できるようにシード付き） ----
 
   function makeRng(seed = Math.floor(Math.random() * 2 ** 32)) {
@@ -401,6 +413,7 @@
       this.comment = ""; // 接待AIのひとこと
       this.pieces = new Array(NUM_KINDS).fill(0); // 出現したミノの数
       this.assisting = false; // ナチュラル接待モードで、今こっそり接待しているか
+      this.next = null; // 鬼モードで先に決めた次のミノ（それ以外のモードは null）
       this.events = []; // 効果音・演出のための出来事
       this.fallTimer = 0;
       this.lockTimer = 0;
@@ -531,6 +544,7 @@
     setMode(m) {
       this.mode = m;
       this.assisting = false;
+      this.next = null;
       if (!this.over) this.comment = `次のミノから${MODE_NAMES[m]}モードです。`;
     }
 
@@ -615,7 +629,9 @@
         this.ratings = withVariety(this.ratings, this.history);
         k = pickBest(this.ratings, this.rng);
       } else if (this.mode === MODE.ONI) {
-        k = pickWorst(this.ratings, this.rng);
+        // NEXT を出しているなら、前回予告したミノを出す
+        k = this.next !== null ? this.next : pickOni(this.ratings, this.rng);
+        this.next = null;
       } else {
         k = this.nextFromBag();
       }
@@ -637,6 +653,11 @@
         }
         this.cur = piece(this.cur.kind, this.cur.rot, this.cur.x, this.cur.y - 1);
       }
+      if (this.mode === MODE.ONI && ONI_MERCY.next) {
+        // 次のミノは「今のミノを一番良い場所に置いた後の盤面」で困るものを先に決めて予告する。
+        // 違う場所に置けば鬼の読みを外せる、というのがお情け。
+        this.next = pickOni(rateAll(simulate(b, this.hint).board), this.rng);
+      }
       this.comment = praise + this.commentFor(this.ratings[k]);
     }
 
@@ -645,7 +666,10 @@
       if (this.mode === MODE.NORMAL) {
         return `${name}が来ました（通常モード）。\n接待AIなら ${KIND_NAMES[pickBest(this.ratings, this.rng)]}ミノを出していました。`;
       }
-      if (this.mode === MODE.ONI) return `${name}です。\n…どこに置くか、せいぜい悩んでください。`;
+      if (this.mode === MODE.ONI) {
+        if (this.next !== null) return `${name}です。次は${KIND_NAMES[this.next]}ミノ。\n…お情けで教えてあげます。`;
+        return `${name}です。\n…どこに置くか、せいぜい悩んでください。`;
+      }
       // こっそり接待中だと気づかれないよう、どちらのときも同じ中立的なひとことにする
       if (this.mode === MODE.NATURAL) return `${name}が来ました。`;
       if (r.lines === 4) return `${name}をご用意しました！\n縦に差し込めばテトリスです！`;
@@ -717,6 +741,7 @@
           paused: game.paused,
           mode: game.mode,
           assisting: game.assisting, // こっそり接待中か（画面には出さない。開発者ツールでの確認用）
+          next: game.over ? null : game.next, // 鬼モードの NEXT（ミノの種類。ないときは null）
           comment: game.comment,
           stack: game.stackHeight(),
           ranking: game.ranking(),
@@ -726,7 +751,7 @@
   }
 
   return {
-    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES, NATURAL_ASSIST,
+    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES, NATURAL_ASSIST, ONI_MERCY,
     piece, cells, fits, placementKey, features, simulate, forEachPlacement, dropSlow, rateAll,
     withVariety, pickBest, pickWorst, makeRng, Game, createApi,
   };

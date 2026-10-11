@@ -21,6 +21,7 @@ function gameWith(mode, b, seed = 1) {
   const g = new E.Game(mode, E.makeRng(seed));
   g.colors = Array.from({ length: H }, (_, y) => Uint8Array.from({ length: W }, (_, x) => (b[y] >> x) & 1));
   g.history = [];
+  g.next = null; // 空の盤面で予告した鬼モードの NEXT は捨てる
   g.spawn("");
   g.takeEvents();
   return g;
@@ -150,6 +151,39 @@ test("ナチュラル接待: 接待中もそうでないときも、コメント
     const g = gameWith(MODE.NATURAL, b);
     assert.doesNotMatch(g.comment, /接待|どうぞ|ご用意|テトリス/, g.comment);
   }
+});
+
+// ---- 鬼モードのお情け ----
+
+test("鬼モード: NEXT を予告し、予告どおりのミノが次に出る", () => {
+  const g = new E.Game(MODE.ONI, E.makeRng(3));
+  for (let i = 0; i < 20 && !g.over; i++) {
+    const announced = g.next;
+    assert.notEqual(announced, null);
+    assert.match(g.comment, new RegExp(`次は${E.KIND_NAMES[announced]}ミノ`));
+    g.autoPlace();
+    if (!g.over) assert.equal(g.cur.kind, announced, `piece ${i + 1}`);
+  }
+});
+
+test("鬼モード: 査定の下位3種からランダムに出す（毎回同じにはならない）", () => {
+  const seen = new Set();
+  for (let seed = 1; seed <= 20; seed++) {
+    const g = gameWith(MODE.ONI, tetrisWell, seed);
+    const bottom3 = g.ratings.slice().sort((a, b) => a.score - b.score).slice(0, 3).map((r) => r.kind);
+    assert.ok(bottom3.includes(g.cur.kind), `seed ${seed}: ${g.cur.kind} not in ${bottom3}`);
+    seen.add(g.cur.kind);
+  }
+  assert.ok(seen.size >= 2, `いつも同じミノ: ${[...seen]}`);
+});
+
+test("鬼モード以外では NEXT を出さない（切り替えたら消える）", () => {
+  const g = new E.Game(MODE.ONI, E.makeRng(1));
+  assert.notEqual(g.next, null);
+  g.setMode(MODE.NORMAL);
+  g.autoPlace();
+  assert.equal(g.next, null);
+  assert.equal(E.createApi().state().next, null); // 接待モードで始まる
 });
 
 test("AI の計算は1手あたり 50ms 未満", () => {
