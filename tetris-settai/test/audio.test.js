@@ -24,7 +24,11 @@ test("接待しているときだけ長調にする", () => {
   };
   assert.equal(major({ mode: 0 }), true, "接待");
   assert.equal(major({ mode: 1 }), false, "通常");
-  assert.equal(major({ mode: 2 }), false, "鬼");
+  assert.equal(major({ mode: 2 }), false, "鬼Lv2");
+  assert.equal(major({ mode: 4 }), false, "鬼Lv1");
+  assert.equal(s.leadType, "sawtooth", "鬼は荒い音色");
+  assert.equal(major({ mode: 5 }), false, "鬼Lv3");
+  assert.equal(s.leadType, "sawtooth", "鬼Lv3も荒い音色");
   assert.equal(major({ mode: 3, assisting: false }), false, "ナチュラル接待（ランダム中）");
   assert.equal(major({ mode: 3, assisting: true }), true, "ナチュラル接待（こっそり接待中）");
   assert.equal(s.pitch(72), 73, "長調ではドがド#になる");

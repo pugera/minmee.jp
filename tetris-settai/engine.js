@@ -18,9 +18,10 @@
 
   const KIND_NAMES = ["I", "O", "T", "S", "Z", "J", "L"];
   const NUM_KINDS = 7;
-  // 接待 / 通常（7種1巡） / 鬼 / ナチュラル接待（普段は通常、ピンチになったらこっそり接待）
-  const MODE = { SETTAI: 0, NORMAL: 1, ONI: 2, NATURAL: 3 };
-  const MODE_NAMES = ["接待", "通常", "鬼", "ナチュラル接待"];
+  // 接待 / 通常（7種1巡） / 鬼Lv2 / ナチュラル接待（普段は通常、ピンチになったらこっそり接待） / 鬼Lv1 / 鬼Lv3
+  const MODE = { SETTAI: 0, NORMAL: 1, ONI2: 2, NATURAL: 3, ONI1: 4, ONI3: 5 };
+  const MODE_NAMES = ["接待", "通常", "鬼Lv2", "ナチュラル接待", "鬼Lv1", "鬼Lv3"];
+  const isOni = (mode) => mode === MODE.ONI1 || mode === MODE.ONI2 || mode === MODE.ONI3;
 
   // ナチュラル接待モードで接待を始める・やめる基準。高さは見えている範囲の段数（20段中）、
   // 穴は上がふさがった空きマスの数。始める基準とやめる基準に差をつけて、
@@ -347,25 +348,36 @@
     return rs.map((r) => ({ ...r, score: r.score - VARIETY_PENALTY * last.filter((k) => k === r.kind).length }));
   }
 
-  // pick は sign=1 なら最高評価、sign=-1 なら最低評価のミノを選ぶ（僅差ならランダム）。
-  function pick(rs, rng, sign) {
-    const best = Math.max(...rs.map((r) => sign * r.score));
-    const cands = rs.filter((r) => sign * r.score >= best - PICK_TOLERANCE);
+  // pickBest は最高評価のミノを選ぶ（僅差ならランダム）。
+  function pickBest(rs, rng) {
+    const best = Math.max(...rs.map((r) => r.score));
+    const cands = rs.filter((r) => r.score >= best - PICK_TOLERANCE);
     return cands[rng.int(cands.length)].kind;
   }
-  const pickBest = (rs, rng) => pick(rs, rng, 1);
-  const pickWorst = (rs, rng) => pick(rs, rng, -1);
 
-  // 鬼モードのお情け。毎回最悪のミノだと攻略不可能なので手加減する。
-  //   choices: 評価の低い方から何種類の中からランダムに選ぶか（1 なら常に最悪）
+  // 鬼モードの手加減（お情け）。毎回最悪のミノだと攻略不可能なので、レベルで加減する。
+  //   weights: 査定の低い順（7位, 6位, …, 1位）に、そのミノを出す重み
   //   next: 次のミノまで先に決めて NEXT に表示するか
-  const ONI_MERCY = { choices: 3, next: true };
+  const ONI_LEVELS = {
+    // Lv1: 7位が一番出やすく（35%）、順位が上がるほど出にくい。1位はごくたまに（0.7%）
+    //      自動プレイで、上手い人でも毎回ゲームオーバーになるが Lv2 よりは粘れる重みにした
+    [MODE.ONI1]: { weights: [49, 36, 25, 16, 9, 4, 1], next: true },
+    // Lv2: 下位3種（7〜5位）から均等に
+    [MODE.ONI2]: { weights: [1, 1, 1, 0, 0, 0, 0], next: true },
+    // Lv3: Lv2 と同じ選び方で、NEXT を教えない。
+    //      プレイヤーが実際に置いた盤面を見てから困るミノを選ぶので、鬼の読みを外せない
+    [MODE.ONI3]: { weights: [1, 1, 1, 0, 0, 0, 0], next: false },
+  };
 
-  // pickOni は評価の低い方から choices 種類の中からランダムに1つ選ぶ。
-  function pickOni(rs, rng) {
-    if (ONI_MERCY.choices <= 1) return pickWorst(rs, rng);
-    const worst = rs.slice().sort((a, b) => a.score - b.score).slice(0, ONI_MERCY.choices);
-    return worst[rng.int(worst.length)].kind;
+  // pickOni は査定の低い順に weights の重みでランダムに1つ選ぶ。
+  function pickOni(rs, rng, weights) {
+    const sorted = rs.slice().sort((a, b) => a.score - b.score);
+    let r = rng.next() * weights.reduce((a, w) => a + w, 0);
+    for (let i = 0; i < sorted.length; i++) {
+      r -= weights[i];
+      if (r < 0) return sorted[i].kind;
+    }
+    return sorted[0].kind;
   }
 
   // ---- 乱数（テストで再現できるようにシード付き） ----
@@ -608,7 +620,7 @@
         this.level = Math.floor(this.lines / 10) + 1;
         this.emit("clear", { lines: rows.length, rows });
         if (this.level > level) this.emit("levelup");
-        if (this.mode !== MODE.ONI) praise = PRAISE[rows.length] + "\n";
+        if (!isOni(this.mode)) praise = PRAISE[rows.length] + "\n";
       }
       this.spawn(praise);
     }
@@ -628,9 +640,9 @@
         // 査定表示も実際の判断と一致するよう、補正後の評価を保存する
         this.ratings = withVariety(this.ratings, this.history);
         k = pickBest(this.ratings, this.rng);
-      } else if (this.mode === MODE.ONI) {
+      } else if (isOni(this.mode)) {
         // NEXT を出しているなら、前回予告したミノを出す
-        k = this.next !== null ? this.next : pickOni(this.ratings, this.rng);
+        k = this.next !== null ? this.next : pickOni(this.ratings, this.rng, ONI_LEVELS[this.mode].weights);
         this.next = null;
       } else {
         k = this.nextFromBag();
@@ -653,10 +665,10 @@
         }
         this.cur = piece(this.cur.kind, this.cur.rot, this.cur.x, this.cur.y - 1);
       }
-      if (this.mode === MODE.ONI && ONI_MERCY.next) {
+      if (isOni(this.mode) && ONI_LEVELS[this.mode].next) {
         // 次のミノは「今のミノを一番良い場所に置いた後の盤面」で困るものを先に決めて予告する。
         // 違う場所に置けば鬼の読みを外せる、というのがお情け。
-        this.next = pickOni(rateAll(simulate(b, this.hint).board), this.rng);
+        this.next = pickOni(rateAll(simulate(b, this.hint).board), this.rng, ONI_LEVELS[this.mode].weights);
       }
       this.comment = praise + this.commentFor(this.ratings[k]);
     }
@@ -666,7 +678,7 @@
       if (this.mode === MODE.NORMAL) {
         return `${name}が来ました（通常モード）。\n接待AIなら ${KIND_NAMES[pickBest(this.ratings, this.rng)]}ミノを出していました。`;
       }
-      if (this.mode === MODE.ONI) {
+      if (isOni(this.mode)) {
         if (this.next !== null) return `${name}です。次は${KIND_NAMES[this.next]}ミノ。\n…お情けで教えてあげます。`;
         return `${name}です。\n…どこに置くか、せいぜい悩んでください。`;
       }
@@ -751,8 +763,8 @@
   }
 
   return {
-    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES, NATURAL_ASSIST, ONI_MERCY,
+    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES, NATURAL_ASSIST, ONI_LEVELS, isOni, pickOni,
     piece, cells, fits, placementKey, features, simulate, forEachPlacement, dropSlow, rateAll,
-    withVariety, pickBest, pickWorst, makeRng, Game, createApi,
+    withVariety, pickBest, makeRng, Game, createApi,
   };
 });

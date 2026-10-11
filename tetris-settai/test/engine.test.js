@@ -48,8 +48,8 @@ test("接待モード: T字の穴には T ミノを出す", () => {
   assert.equal(g.cur.kind, T);
 });
 
-test("鬼モード: テトリスできる縦穴があっても I ミノは出さない", () => {
-  assert.notEqual(gameWith(MODE.ONI, tetrisWell).cur.kind, I);
+test("鬼Lv2: テトリスできる縦穴があっても I ミノは出さない", () => {
+  assert.notEqual(gameWith(MODE.ONI2, tetrisWell).cur.kind, I);
 });
 
 test("T ミノの右向き（SRS の R 状態）は縦棒の右に突起", () => {
@@ -155,30 +155,70 @@ test("ナチュラル接待: 接待中もそうでないときも、コメント
 
 // ---- 鬼モードのお情け ----
 
-test("鬼モード: NEXT を予告し、予告どおりのミノが次に出る", () => {
-  const g = new E.Game(MODE.ONI, E.makeRng(3));
-  for (let i = 0; i < 20 && !g.over; i++) {
-    const announced = g.next;
-    assert.notEqual(announced, null);
-    assert.match(g.comment, new RegExp(`次は${E.KIND_NAMES[announced]}ミノ`));
-    g.autoPlace();
-    if (!g.over) assert.equal(g.cur.kind, announced, `piece ${i + 1}`);
-  }
+for (const [name, mode] of [["鬼Lv1", MODE.ONI1], ["鬼Lv2", MODE.ONI2]]) {
+  test(`${name}: NEXT を予告し、予告どおりのミノが次に出る`, () => {
+    const g = new E.Game(mode, E.makeRng(3));
+    for (let i = 0; i < 20 && !g.over; i++) {
+      const announced = g.next;
+      assert.notEqual(announced, null);
+      assert.match(g.comment, new RegExp(`次は${E.KIND_NAMES[announced]}ミノ`));
+      g.autoPlace();
+      if (!g.over) assert.equal(g.cur.kind, announced, `piece ${i + 1}`);
+    }
+  });
+}
+
+// pickOni を何度も引いて、査定の順位ごとに出た割合を返す（[7位, 6位, …, 1位]）
+function rankRates(weights, n = 28000) {
+  const rs = [3, 6, 0, 5, 1, 4, 2].map((rank, kind) => ({ kind, score: rank })); // score が低いほど下位
+  const byRank = rs.slice().sort((a, b) => a.score - b.score).map((r) => r.kind);
+  const counts = new Array(7).fill(0);
+  const rng = E.makeRng(5);
+  for (let i = 0; i < n; i++) counts[byRank.indexOf(E.pickOni(rs, rng, weights))]++;
+  return counts.map((c) => c / n);
+}
+
+test("鬼Lv1: 7位が一番出やすく、順位が上がるほど出にくい（1位はごくたまに出る）", () => {
+  const rates = rankRates(E.ONI_LEVELS[MODE.ONI1].weights);
+  for (let i = 1; i < 7; i++) assert.ok(rates[i] < rates[i - 1], `rates ${rates.map((r) => r.toFixed(3))}`);
+  assert.ok(Math.abs(rates[0] - .35) < .02, `7位 ${rates[0]}`);
+  assert.ok(rates[6] > .003 && rates[6] < .015, `1位 ${rates[6]}`);
 });
 
-test("鬼モード: 査定の下位3種からランダムに出す（毎回同じにはならない）", () => {
-  const seen = new Set();
-  for (let seed = 1; seed <= 20; seed++) {
-    const g = gameWith(MODE.ONI, tetrisWell, seed);
+for (const [name, mode] of [["鬼Lv2", MODE.ONI2], ["鬼Lv3", MODE.ONI3]]) {
+  test(`${name}: 下位3種からだけ、ほぼ均等に出す`, () => {
+    const rates = rankRates(E.ONI_LEVELS[mode].weights);
+    for (let i = 0; i < 3; i++) assert.ok(Math.abs(rates[i] - 1 / 3) < .02, `rates ${rates}`);
+    for (let i = 3; i < 7; i++) assert.equal(rates[i], 0);
+  });
+
+  test(`${name}: 実際の盤面でも査定の下位3種から出す（毎回同じにはならない）`, () => {
+    const seen = new Set();
+    for (let seed = 1; seed <= 20; seed++) {
+      const g = gameWith(mode, tetrisWell, seed);
+      const bottom3 = g.ratings.slice().sort((a, b) => a.score - b.score).slice(0, 3).map((r) => r.kind);
+      assert.ok(bottom3.includes(g.cur.kind), `seed ${seed}: ${g.cur.kind} not in ${bottom3}`);
+      seen.add(g.cur.kind);
+    }
+    assert.ok(seen.size >= 2, `いつも同じミノ: ${[...seen]}`);
+  });
+}
+
+test("鬼Lv3: NEXT は教えず、置いた後の盤面を見てから困るミノを選ぶ", () => {
+  const g = new E.Game(MODE.ONI3, E.makeRng(2));
+  for (let i = 0; i < 20 && !g.over; i++) {
+    assert.equal(g.next, null);
+    assert.doesNotMatch(g.comment, /次は/);
+    g.autoPlace();
+    if (g.over) break;
+    // 出てきたミノは、今の盤面の査定で下位3種のどれか
     const bottom3 = g.ratings.slice().sort((a, b) => a.score - b.score).slice(0, 3).map((r) => r.kind);
-    assert.ok(bottom3.includes(g.cur.kind), `seed ${seed}: ${g.cur.kind} not in ${bottom3}`);
-    seen.add(g.cur.kind);
+    assert.ok(bottom3.includes(g.cur.kind), `piece ${i + 1}`);
   }
-  assert.ok(seen.size >= 2, `いつも同じミノ: ${[...seen]}`);
 });
 
 test("鬼モード以外では NEXT を出さない（切り替えたら消える）", () => {
-  const g = new E.Game(MODE.ONI, E.makeRng(1));
+  const g = new E.Game(MODE.ONI2, E.makeRng(1));
   assert.notEqual(g.next, null);
   g.setMode(MODE.NORMAL);
   g.autoPlace();

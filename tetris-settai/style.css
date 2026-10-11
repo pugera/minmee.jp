@@ -12,6 +12,8 @@
   --natural: #8ee6a8;
   --normal: #7ab8ff;
   --oni: #ff5a5a;
+  --oni1: #ff9a52;
+  --oni3: #c04dff;
   color-scheme: dark;
 }
 
@@ -135,6 +137,8 @@ button {
 .mode-badge[data-mode="1"] { color: var(--normal); }
 .mode-badge[data-mode="2"] { color: var(--oni); }
 .mode-badge[data-mode="3"] { color: var(--natural); }
+.mode-badge[data-mode="4"] { color: var(--oni1); }
+.mode-badge[data-mode="5"] { color: var(--oni3); }
 
 /* ---- NEXT（鬼モードのお情け。盤面の右上に重ねる） ---- */
 
@@ -245,9 +249,10 @@ button {
 
 .settings { display: flex; flex-direction: column; gap: 8px; }
 
+/* 1段目に「接待 / ナチュラル / 通常」、2段目に「鬼Lv1 / 鬼Lv2 / 鬼Lv3」を並べる */
 .seg {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 3px;
   padding: 3px;
   border-radius: 9px;
@@ -268,6 +273,8 @@ button {
 .seg button[aria-pressed="true"][data-mode="1"] { background: var(--normal); color: #001a33; }
 .seg button[aria-pressed="true"][data-mode="2"] { background: var(--oni); color: #330000; }
 .seg button[aria-pressed="true"][data-mode="3"] { background: var(--natural); color: #00290f; }
+.seg button[aria-pressed="true"][data-mode="4"] { background: var(--oni1); color: #331400; }
+.seg button[aria-pressed="true"][data-mode="5"] { background: var(--oni3); color: #fff; }
 
 .switch {
   display: flex;
