@@ -9,6 +9,7 @@
   --pink: #ff5078;
   --green: #5aff78;
   --settai: #ffd23c;
+  --natural: #8ee6a8;
   --normal: #7ab8ff;
   --oni: #ff5a5a;
   color-scheme: dark;
@@ -123,15 +124,17 @@ button {
 
 .stats {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px 12px;
 }
 .stat { display: flex; flex-direction: column; }
+.stat.mode-stat { grid-column: 1 / -1; }
 .stat .label { font-size: 12px; color: var(--muted); }
 .stat .value { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mode-badge[data-mode="0"] { color: var(--settai); }
 .mode-badge[data-mode="1"] { color: var(--normal); }
 .mode-badge[data-mode="2"] { color: var(--oni); }
+.mode-badge[data-mode="3"] { color: var(--natural); }
 
 /* ---- 接待AIのひとこと ---- */
 
@@ -214,8 +217,8 @@ button {
 
 .seg {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
   padding: 3px;
   border-radius: 9px;
   background: #121220;
@@ -226,11 +229,15 @@ button {
   border-radius: 7px;
   background: transparent;
   color: var(--muted);
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: -.02em;
 }
 .seg button[aria-pressed="true"][data-mode="0"] { background: var(--settai); color: #2a2000; }
 .seg button[aria-pressed="true"][data-mode="1"] { background: var(--normal); color: #001a33; }
 .seg button[aria-pressed="true"][data-mode="2"] { background: var(--oni); color: #330000; }
+.seg button[aria-pressed="true"][data-mode="3"] { background: var(--natural); color: #00290f; }
 
 .switch {
   display: flex;

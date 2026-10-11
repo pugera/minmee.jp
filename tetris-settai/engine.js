@@ -18,8 +18,20 @@
 
   const KIND_NAMES = ["I", "O", "T", "S", "Z", "J", "L"];
   const NUM_KINDS = 7;
-  const MODE = { SETTAI: 0, NORMAL: 1, ONI: 2 }; // 接待 / 通常（7種1巡） / 鬼
-  const MODE_NAMES = ["接待", "通常", "鬼"];
+  // 接待 / 通常（7種1巡） / 鬼 / ナチュラル接待（普段は通常、ピンチになったらこっそり接待）
+  const MODE = { SETTAI: 0, NORMAL: 1, ONI: 2, NATURAL: 3 };
+  const MODE_NAMES = ["接待", "通常", "鬼", "ナチュラル接待"];
+
+  // ナチュラル接待モードで接待を始める・やめる基準。高さは見えている範囲の段数（20段中）、
+  // 穴は上がふさがった空きマスの数。始める基準とやめる基準に差をつけて、
+  // 境目で接待のオン・オフがパタパタ切り替わらないようにしている。
+  // 自動プレイで計測した目安：上手い人には発動せず、ふつうの腕前だと全体の3割ほど接待する。
+  const NATURAL_ASSIST = {
+    startHeight: 12, // この高さまで積み上がったら接待を始める
+    startHoles: 8, // 穴がこれだけ増えたら接待を始める
+    endHeight: 8, // 高さがこれ以下 かつ
+    endHoles: 4, // 穴がこれ以下まで立て直したら、ランダムに戻る
+  };
 
   // SHAPES[kind][rot] = 4つのブロックの [x, y]（SRS準拠のボックス内座標、yは下向き）
   const SHAPES = [
@@ -388,6 +400,7 @@
       this.ratings = []; // 直近のミノ査定
       this.comment = ""; // 接待AIのひとこと
       this.pieces = new Array(NUM_KINDS).fill(0); // 出現したミノの数
+      this.assisting = false; // ナチュラル接待モードで、今こっそり接待しているか
       this.events = []; // 効果音・演出のための出来事
       this.fallTimer = 0;
       this.lockTimer = 0;
@@ -517,7 +530,20 @@
     // 次に出てくるミノから新しいモードを適用する
     setMode(m) {
       this.mode = m;
+      this.assisting = false;
       if (!this.over) this.comment = `次のミノから${MODE_NAMES[m]}モードです。`;
+    }
+
+    // ナチュラル接待: ピンチ（高く積み上がった・穴だらけ）になったら接待を始め、十分に立て直したらやめる
+    updateAssist(b) {
+      const height = this.stackHeight();
+      const holes = countHoles(b);
+      const t = NATURAL_ASSIST;
+      if (this.assisting) {
+        if (height <= t.endHeight && holes <= t.endHoles) this.assisting = false;
+      } else if (height >= t.startHeight || holes >= t.startHoles) {
+        this.assisting = true;
+      }
     }
 
     // 時間（ms）を進める。画面の更新が必要なら true
@@ -583,7 +609,8 @@
       this.ratings = rateAll(b);
 
       let k;
-      if (this.mode === MODE.SETTAI) {
+      if (this.mode === MODE.NATURAL) this.updateAssist(b);
+      if (this.mode === MODE.SETTAI || (this.mode === MODE.NATURAL && this.assisting)) {
         // 査定表示も実際の判断と一致するよう、補正後の評価を保存する
         this.ratings = withVariety(this.ratings, this.history);
         k = pickBest(this.ratings, this.rng);
@@ -619,6 +646,8 @@
         return `${name}が来ました（通常モード）。\n接待AIなら ${KIND_NAMES[pickBest(this.ratings, this.rng)]}ミノを出していました。`;
       }
       if (this.mode === MODE.ONI) return `${name}です。\n…どこに置くか、せいぜい悩んでください。`;
+      // こっそり接待中だと気づかれないよう、どちらのときも同じ中立的なひとことにする
+      if (this.mode === MODE.NATURAL) return `${name}が来ました。`;
       if (r.lines === 4) return `${name}をご用意しました！\n縦に差し込めばテトリスです！`;
       if (r.lines > 0) return `${name}をどうぞ！\n${r.lines}ライン消せる場所があります。`;
       if (r.holesAdded === 0) return `${name}をどうぞ！\n穴を作らずにピッタリはまります。`;
@@ -687,6 +716,7 @@
           over: game.over,
           paused: game.paused,
           mode: game.mode,
+          assisting: game.assisting, // こっそり接待中か（画面には出さない。開発者ツールでの確認用）
           comment: game.comment,
           stack: game.stackHeight(),
           ranking: game.ranking(),
@@ -696,7 +726,7 @@
   }
 
   return {
-    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES,
+    W, H, HIDDEN, VISIBLE, MODE, MODE_NAMES, KIND_NAMES, SHAPES, NATURAL_ASSIST,
     piece, cells, fits, placementKey, features, simulate, forEachPlacement, dropSlow, rateAll,
     withVariety, pickBest, pickWorst, makeRng, Game, createApi,
   };

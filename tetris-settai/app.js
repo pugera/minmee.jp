@@ -5,11 +5,15 @@
 
 (() => {
   const COLORS = ["#00c8e6", "#f0c800", "#aa46d2", "#46c850", "#e63c46", "#3264eb", "#f58c1e"]; // I O T S Z J L
-  const MODE_NAMES = ["接待", "通常", "鬼"];
+  // モードの値は engine.js の MODE と同じ（0:接待 1:通常 2:鬼 3:ナチュラル接待）
+  const { MODE, MODE_NAMES } = SettaiEngine;
+  const MODE_LABELS = ["接待", "通常", "鬼", "ナチュラル"]; // ボタン用の短い名前
+  const MODE_ORDER = [MODE.SETTAI, MODE.NATURAL, MODE.NORMAL, MODE.ONI]; // ボタンと 1〜4 キーの並び（手厚い順）
   const MODE_DESC = [
     "盤面を見て、毎回あなたに一番都合の良いミノをお出しします。",
     "普通のテトリスと同じ、7種1巡のランダムです。",
     "毎回あなたが一番困るミノを選んで出します。覚悟してください。",
+    "普段は普通のランダム。積み上がって危なくなったり穴だらけになってきたら、気づかれないようにこっそり接待します。",
   ];
   const CLEAR_TEXT = ["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!!"];
   const DAS = 160; // 長押しで連続移動が始まるまで（ms）
@@ -170,7 +174,8 @@
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return; // ブラウザのショートカットは邪魔しない
     const code = e.code;
-    const modeKey = { Digit1: 0, Digit2: 1, Digit3: 2, Numpad1: 0, Numpad2: 1, Numpad3: 2 }[code];
+    const slot = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[code];
+    const modeKey = slot === undefined ? undefined : MODE_ORDER[slot];
 
     if (phase === "title") {
       if (code === "Enter" || code === "Space") {
@@ -238,9 +243,9 @@
   }
 
   for (const group of document.querySelectorAll("[data-modes]")) {
-    MODE_NAMES.forEach((name, m) => {
+    MODE_ORDER.forEach((m) => {
       const b = document.createElement("button");
-      b.textContent = name;
+      b.textContent = MODE_LABELS[m];
       b.dataset.mode = m;
       noFocus(b);
       b.addEventListener("click", () => setMode(m));
@@ -327,6 +332,8 @@
       comment.classList.add("pop");
     }
 
+    // ナチュラル接待では、接待中に出したミノが毎回1位になって気づかれてしまうので査定を隠す
+    $("rankingCard").hidden = st.mode === MODE.NATURAL;
     st.ranking.forEach((r, i) => {
       const row = rankRows[r.kind];
       row.style.top = i * ROW_H + "px";

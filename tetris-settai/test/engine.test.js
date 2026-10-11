@@ -91,6 +91,67 @@ test("接待モードで自動プレイ: 穴を一度も作らず、7種類す�
   g.pieces.forEach((n, k) => assert.ok(n > 0, `${E.KIND_NAMES[k]} never appeared: ${g.pieces}`));
 });
 
+// ---- ナチュラル接待モード ----
+
+const setBoard = (g, b) => {
+  g.colors = Array.from({ length: H }, (_, y) => Uint8Array.from({ length: W }, (_, x) => (b[y] >> x) & 1));
+};
+const tall = (n, row) => rows(...Array(n).fill(row));
+
+test("ナチュラル接待: 低くてきれいな盤面では接待せず、7種1巡のランダムで出る", () => {
+  for (let seed = 1; seed <= 5; seed++) {
+    const g = new E.Game(MODE.NATURAL, E.makeRng(seed));
+    const kinds = [g.cur.kind];
+    for (let i = 0; i < 6; i++) {
+      g.autoPlace();
+      kinds.push(g.cur.kind);
+    }
+    assert.equal(g.assisting, false);
+    assert.deepEqual([...kinds].sort(), [0, 1, 2, 3, 4, 5, 6], `seed ${seed}: ${kinds}`);
+  }
+});
+
+test("ナチュラル接待: 危険な高さまで積み上がると、こっそり接待を始める", () => {
+  for (let seed = 1; seed <= 5; seed++) {
+    const g = gameWith(MODE.NATURAL, tall(E.NATURAL_ASSIST.startHeight, "#########."), seed);
+    assert.equal(g.assisting, true);
+    assert.equal(g.cur.kind, I, `seed ${seed}: テトリスできる縦穴には I を出すはず`);
+  }
+});
+
+test("ナチュラル接待: 低くても穴だらけになると、こっそり接待を始める", () => {
+  const g = gameWith(MODE.NATURAL, rows(
+    ".#########",
+    "#.#.#.#.#.",
+    ".#.#.#.#.#",
+  ));
+  assert.equal(g.assisting, true);
+});
+
+test("ナチュラル接待: 始める基準とやめる基準の間では、今の状態を続ける", () => {
+  const t = E.NATURAL_ASSIST;
+  const middle = tall(t.endHeight + 1, "#########."); // 始める高さより低く、やめる高さより高い
+  const g = new E.Game(MODE.NATURAL, E.makeRng(1));
+  setBoard(g, middle);
+
+  g.updateAssist(g.bits());
+  assert.equal(g.assisting, false, "接待していなければ、まだ始めない");
+  g.assisting = true;
+  g.updateAssist(g.bits());
+  assert.equal(g.assisting, true, "接待中なら、十分に下がるまで続ける");
+
+  setBoard(g, tall(t.endHeight, "#########."));
+  g.updateAssist(g.bits());
+  assert.equal(g.assisting, false, "やめる高さまで下がったらランダムに戻る");
+});
+
+test("ナチュラル接待: 接待中もそうでないときも、コメントで接待していることを匂わせない", () => {
+  for (const b of [new Uint16Array(H), tall(14, "#########.")]) {
+    const g = gameWith(MODE.NATURAL, b);
+    assert.doesNotMatch(g.comment, /接待|どうぞ|ご用意|テトリス/, g.comment);
+  }
+});
+
 test("AI の計算は1手あたり 50ms 未満", () => {
   const b = rows(
     "##.###.###",
