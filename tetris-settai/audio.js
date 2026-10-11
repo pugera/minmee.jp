@@ -336,7 +336,7 @@ class SettaiSound {
     let bpm = Math.min(132 + (state.level - 1) * 6, 200);
     if (state.stack >= 14) bpm *= 1.15;
     this.setTempo(bpm);
-    this.leadType = state.mode === 2 ? "sawtooth" : "square";
+    this.leadType = [2, 4, 5].includes(state.mode) ? "sawtooth" : "square"; // 鬼Lv2・鬼Lv1・鬼Lv3
     this.major = state.mode === 0 || (state.mode === 3 && state.assisting);
   }
 }

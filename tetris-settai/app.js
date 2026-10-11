@@ -5,15 +5,18 @@
 
 (() => {
   const COLORS = ["#00c8e6", "#f0c800", "#aa46d2", "#46c850", "#e63c46", "#3264eb", "#f58c1e"]; // I O T S Z J L
-  // モードの値は engine.js の MODE と同じ（0:接待 1:通常 2:鬼 3:ナチュラル接待）
+  // モードの値は engine.js の MODE と同じ（0:接待 1:通常 2:鬼Lv2 3:ナチュラル接待 4:鬼Lv1 5:鬼Lv3）
   const { MODE, MODE_NAMES } = SettaiEngine;
-  const MODE_LABELS = ["接待", "通常", "鬼", "ナチュラル"]; // ボタン用の短い名前
-  const MODE_ORDER = [MODE.SETTAI, MODE.NATURAL, MODE.NORMAL, MODE.ONI]; // ボタンと 1〜4 キーの並び（手厚い順）
+  const MODE_LABELS = ["接待", "通常", "鬼Lv2", "ナチュラル", "鬼Lv1", "鬼Lv3"]; // ボタン用の短い名前
+  // ボタンと 1〜6 キーの並び（手厚い順）
+  const MODE_ORDER = [MODE.SETTAI, MODE.NATURAL, MODE.NORMAL, MODE.ONI1, MODE.ONI2, MODE.ONI3];
   const MODE_DESC = [
     "盤面を見て、毎回あなたに一番都合の良いミノをお出しします。",
     "普通のテトリスと同じ、7種1巡のランダムです。",
-    "毎回あなたが一番困るミノを選んで出します。覚悟してください。",
+    "あなたが困るミノの下位3種からしか出しません。お情けで NEXT だけは教えてあげます。",
     "普段は普通のランダム。積み上がって危なくなったり穴だらけになってきたら、気づかれないようにこっそり接待します。",
+    "あなたが困るミノほど出やすくなっています。良いミノはめったに出ません。NEXT 付き。",
+    "あなたが困るミノの下位3種からしか出しません。NEXT も教えません。置き方を見てから、困るミノを選びます。",
   ];
   const CLEAR_TEXT = ["", "SINGLE", "DOUBLE", "TRIPLE", "TETRIS!!"];
   const DAS = 160; // 長押しで連続移動が始まるまで（ms）
@@ -174,7 +177,8 @@
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey || e.metaKey || e.altKey) return; // ブラウザのショートカットは邪魔しない
     const code = e.code;
-    const slot = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3 }[code];
+    const slot = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5,
+      Numpad1: 0, Numpad2: 1, Numpad3: 2, Numpad4: 3, Numpad5: 4, Numpad6: 5 }[code];
     const modeKey = slot === undefined ? undefined : MODE_ORDER[slot];
 
     if (phase === "title") {
